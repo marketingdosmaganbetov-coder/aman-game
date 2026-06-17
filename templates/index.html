@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Аман Бежит! — Amangeldy Clinic</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;600;700;800&display=swap');
+    
+    /* Брендовые цвета Amangeldy Clinic */
+    :root {
+      --brand-primary: #BC977B; 
+      --brand-secondary: #EDE5DC; 
+      --brand-accent: #6E4C3A; 
+      --brand-dark: #3B3B3B;
+      --brand-light: #EBEBEB;
+      --brand-error: #e24b4a; 
+    }
+    
+    body, html { margin: 0; padding: 0; background: #f0f0f0; }
+    * { box-sizing: border-box; font-family: 'Onest', sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; }
+    
+    #vr-game-root { width: 100%; max-width: 480px; margin: 0 auto; background: #FFFFFF; min-height: 100vh; position: relative; overflow: hidden; touch-action: none !important; }
+    .vr-screen { display: none; flex-direction: column; align-items: center; padding: 28px 20px 24px; min-height: 100vh; }
+    .vr-screen.active { display: flex; }
+    
+    /* Экран регистрации */
+    #screen-register { background: var(--brand-light); justify-content: center; }
+    .vr-logo { width: 120px; height: 120px; object-fit: contain; margin-bottom: 24px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.1)); }
+    .vr-title { font-size: 28px; font-weight: 800; color: var(--brand-dark); text-align: center; margin-bottom: 8px; }
+    .vr-subtitle { font-size: 14px; color: var(--brand-accent); text-align: center; margin-bottom: 28px; max-width: 280px; line-height: 1.4; }
+    
+    .vr-form { width: 100%; display: flex; flex-direction: column; gap: 14px; }
+    .vr-field { position: relative; }
+    .vr-field label { display: block; font-size: 11px; font-weight: 700; color: var(--brand-accent); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .vr-field input { width: 100%; height: 50px; border: 2px solid var(--brand-primary); border-radius: 12px; padding: 0 16px; font-size: 16px; outline: none; color: var(--brand-dark); background: white; transition: 0.2s; }
+    .vr-field input:focus { border-color: var(--brand-accent); }
+    
+    .vr-btn { width: 100%; height: 54px; background: var(--brand-primary); color: white; border: none; border-radius: 14px; font-size: 17px; font-weight: 700; cursor: pointer; margin-top: 10px; transition: 0.1s; }
+    .vr-btn:active { transform: scale(0.97); background: var(--brand-accent); }
+    
+    /* Экран игры */
+    #screen-game { padding: 0; background: linear-gradient(to bottom, #F9F7F5 0%, #FFFFFF 100%); justify-content: flex-start; }
+    #game-hud { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: rgba(255,255,255,0.85); z-index: 10; border-bottom: 2px solid var(--brand-secondary); backdrop-filter: blur(5px); }
+    .hud-score { font-size: 26px; font-weight: 800; color: var(--brand-accent); }
+    .hud-label { font-size: 10px; color: var(--brand-accent); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+    .hud-heart { font-size: 20px; filter: grayscale(100%); opacity: 0.2; transition: 0.3s; }
+    .hud-heart.full { filter: grayscale(0%); opacity: 1; }
+    
+    #game-canvas { display: block; width: 100%; flex-grow: 1; touch-action: none; }
+    .jump-hint { font-size: 15px; color: var(--brand-accent); text-align: center; position: absolute; bottom: 35px; left: 0; right: 0; font-weight: 700; opacity: 0.5; pointer-events: none; }
+    
+    /* Экраны финала */
+    #screen-win { background: var(--brand-secondary); justify-content: center; text-align: center; }
+    .win-emoji { font-size: 80px; margin-bottom: 16px; }
+    .win-bonus-card { background: white; border: 2px solid var(--brand-primary); border-radius: 20px; padding: 24px; width: 100%; margin: 24px 0; box-shadow: 0 8px 25px rgba(110, 76, 58, 0.08); }
+    .win-bonus-text { font-size: 20px; font-weight: 800; color: var(--brand-dark); line-height: 1.3; }
+    
+    #game-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
+    #game-overlay.hidden { display: none; }
+    #overlay-count { font-size: 100px; font-weight: 900; color: var(--brand-primary); }
+  </style>
+</head>
+<body>
+<div id="vr-game-root">
+
+  <div id="screen-register" class="vr-screen active">
+    <img src="{{ url_for('static', filename='bear_run.png') }}" style="object-fit: cover; width: 120px; height: 120px; border-radius: 20px; background: white; padding: 10px; border: 2px solid var(--brand-secondary);" alt="Aman Bear" class="vr-logo">
+    <h2 class="vr-title">Аман, Вперёд!</h2>
+    <p class="vr-subtitle">Пробегите 1000 метров через препятствия, чтобы получить скидку на прием у врача!</p>
+    <div class="vr-form">
+      <div class="vr-field">
+        <label>Номер телефона</label>
+        <input type="tel" id="inp-phone" placeholder="+7 (___) ___ __ __">
+      </div>
+      <div class="vr-field">
+        <label>ИИН</label>
+        <input type="text" id="inp-iin" placeholder="12 цифр" maxlength="12">
+      </div>
+      <button class="vr-btn" id="btn-start">🚀 Начать игру</button>
+    </div>
+  </div>
+
+  <div id="screen-game" class="vr-screen" style="padding:0; justify-content:flex-start;">
+    <div id="game-hud">
+      <div>
+        <div class="hud-label">Дистанция</div>
+        <div class="hud-score" id="hud-score">0 / 1000</div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <span class="hud-heart full" id="heart-1">❤️</span>
+        <span class="hud-heart full" id="heart-2">❤️</span>
+        <span class="hud-heart full" id="heart-3">❤️</span>
+      </div>
+    </div>
+    
+    <div style="flex-grow: 1; position: relative; width: 100%;">
+       <canvas id="game-canvas"></canvas>
+       <div id="game-overlay"><div id="overlay-count">3</div></div>
+       <p class="jump-hint">Тапай по экрану, чтобы прыгнуть!</p>
+    </div>
+  </div>
+
+  <div id="screen-win" class="vr-screen">
+    <div class="win-emoji">🏆</div>
+    <h2 class="vr-title" style="color: var(--brand-accent);">Аман Победил!</h2>
+    <p class="vr-subtitle">Вы пробежали 1000 метров.</p>
+    <div class="win-bonus-card">
+      <div class="win-bonus-text">Скидка 10% на прием у врача прикреплена!</div>
+    </div>
+    <button class="vr-btn" id="btn-claim">✅ Забрать бонус</button>
+  </div>
+
+  <div id="screen-gameover" class="vr-screen">
+    <div class="win-emoji">🦠</div>
+    <h2 class="vr-title" style="color: var(--brand-error);">Вирусы победили</h2>
+    <p class="vr-subtitle">Пробегите 1000 метров, чтобы получить приз. Аман верит в вас!</p>
+    <button class="vr-btn" id="btn-retry" style="background:var(--brand-accent)">🔄 Попробовать снова</button>
+  </div>
+</div>
+
+<script>
+const DISTANCE_TO_WIN = 1000;
+const BONUS_NAME = 'Скидка 10% на прием у врача';
+const PHYSICS = { gravity: 0.65, jumpForce: -14, groundY: 0.85, gameSpeed: 5 };
+
+const STATE = { 
+  gameRunning: false, lastTime: 0, invincibleUntil: 0, shakeTime: 0,
+  score: 0, rawScore: 0, lives: 3, animFrameId: null, bonusSubmitted: false, iin: '' 
+};
+
+// ─── ЗАГРУЗКА АССЕТОВ ───
+const imgBear = new Image();
+imgBear.src = "{{ url_for('static', filename='bear_run.png') }}";
+
+const imgVirus = new Image();
+imgVirus.src = "{{ url_for('static', filename='virus.png') }}";
+
+const imgClinic = new Image();
+imgClinic.src = "{{ url_for('static', filename='clinic.png') }}";
+
+// ─── НАСТРОЙКИ СПРАЙТА АМАНА ───
+const SPRITE_FRAMES = 4; // Количество кадров анимации бега
+let currentFrame = 0;
+let frameTimer = 0;
+const FRAME_INTERVAL = 90; // Скорость перебирания лапками (мс)
+
+const aman = { x: 40, y: 0, w: 60, h: 70, vy: 0, isJumping: false };
+const obstacles = []; 
+const particles = []; // Система частиц пыли
+
+const $ = id => document.getElementById(id);
+const screens = { r: $('screen-register'), g: $('screen-game'), w: $('screen-win'), go: $('screen-gameover') };
+const canvas = $('game-canvas'); const ctx = canvas.getContext('2d');
+let logicalW = 0, logicalH = 0;
+
+function showScreen(name) { Object.values(screens).forEach(s => s.classList.remove('active')); screens[name].classList.add('active'); }
+
+// ВАЛИДАЦИЯ И СТАРТ
+$('inp-phone').addEventListener('input', function() {
+  let v = this.value.replace(/\D/g, ''); if(v.startsWith('8')) v = '7' + v.substring(1); if(!v.startsWith('7')) v = '7' + v;
+  let res = '+7'; if(v.length>1) res += ' ('+v.slice(1,4); if(v.length>4) res += ') '+v.slice(4,7); if(v.length>7) res += ' '+v.slice(7,9); if(v.length>9) res += ' '+v.slice(9,11); this.value=res;
+});
+$('inp-iin').addEventListener('input', function() { this.value = this.value.replace(/\D/g, '').slice(0, 12); });
+
+$('btn-start').addEventListener('click', () => {
+  const p = $('inp-phone').value; const i = $('inp-iin').value;
+  if(p.replace(/\D/g, '').length < 11 || i.length < 12) return alert("Заполните данные корректно");
+  STATE.iin = i;
+  initGame(); showScreen('g'); startCountdown();
+});
+
+// УПРАВЛЕНИЕ (Прыжок тапом)
+const requestJump = () => { 
+  if (STATE.gameRunning && !aman.isJumping) { 
+    aman.vy = PHYSICS.jumpForce; 
+    aman.isJumping = true; 
+  } 
+};
+$('screen-game').addEventListener('pointerdown', (e) => { e.preventDefault(); requestJump(); }, {passive:false});
+
+// ИНИЦИАЛИЗАЦИЯ И RETINA-ФИКС
+function initGame() {
+  const wrapper = canvas.parentElement;
+  logicalW = wrapper.clientWidth;
+  logicalH = wrapper.clientHeight;
+  
+  // Умножаем пиксели для четкости на iPhone/Android
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = logicalW * dpr;
+  canvas.height = logicalH * dpr;
+  canvas.style.width = `${logicalW}px`;
+  canvas.style.height = `${logicalH}px`;
+  ctx.scale(dpr, dpr);
+
+  STATE.gameRunning = false; STATE.score = 0; STATE.rawScore = 0; STATE.lives = 3; STATE.bonusSubmitted = false; STATE.shakeTime = 0;
+  
+  aman.groundY = (logicalH * PHYSICS.groundY) - aman.h; 
+  aman.y = aman.groundY; aman.vy = 0; aman.isJumping = false; 
+  obstacles.length = 0; particles.length = 0;
+  PHYSICS.currentGameSpeed = PHYSICS.gameSpeed;
+  updateHUD();
+}
+
+function updateHUD() { 
+  $('hud-score').textContent = STATE.score + ' / ' + DISTANCE_TO_WIN; 
+  for(let i=1; i<=3; i++) $('heart-'+i).classList.toggle('full', i <= STATE.lives); 
+}
+
+function startCountdown() {
+  $('game-overlay').classList.remove('hidden'); let c = 3; $('overlay-count').textContent = c;
+  const timer = setInterval(() => { c--; if(c>0) $('overlay-count').textContent = c; else { clearInterval(timer); $('game-overlay').classList.add('hidden'); STATE.gameRunning = true; STATE.lastTime = performance.now(); requestAnimationFrame(loop); } }, 900);
+}
+
+// СОЗДАНИЕ ПРЕГРАД И ПЫЛИ
+let obstacleTimer = 0;
+function spawnObstacle() { 
+  const size = 35;
+  obstacles.push({ x: logicalW + 30, y: (logicalH * PHYSICS.groundY) - size + 5, w: size, h: size }); 
+}
+
+function spawnDust() {
+  for(let i=0; i<6; i++) {
+    particles.push({
+      x: aman.x + aman.w/2 + (Math.random()-0.5)*20,
+      y: aman.groundY + aman.h,
+      vx: (Math.random()-0.5)*40 - 20, // Сносит немного назад
+      vy: -Math.random()*40,
+      life: 1
+    });
+  }
+}
+
+// ГЛАВНЫЙ ЦИКЛ ИГРЫ
+function loop(now) {
+  if (!STATE.gameRunning) return;
+  const dt = Math.min((now - STATE.lastTime)/1000, 0.05); 
+  STATE.lastTime = now; 
+  
+  // НАЧИСЛЕНИЕ ОЧКОВ
+  STATE.rawScore += dt * 25 * (PHYSICS.currentGameSpeed / PHYSICS.gameSpeed);
+  STATE.score = Math.floor(STATE.rawScore);
+  if (STATE.score >= DISTANCE_TO_WIN) { STATE.score = DISTANCE_TO_WIN; updateHUD(); endGame(true); return; }
+  updateHUD();
+
+  // SCREEN SHAKE (Тряска экрана)
+  ctx.clearRect(0, 0, logicalW, logicalH);
+  ctx.save();
+  if (STATE.shakeTime > 0) {
+    STATE.shakeTime -= dt * 1000;
+    const mag = (STATE.shakeTime / 400) * 10;
+    ctx.translate((Math.random()-0.5)*mag, (Math.random()-0.5)*mag);
+  }
+
+  // ОТРИСОВКА ПАРАЛЛАКС ФОНА (Здание клиники)
+  let bgOffset = (STATE.rawScore * 1.2) % (logicalW * 1.5);
+  // Рисуем картинку клиники 2 раза для бесшовности
+  if (imgClinic.complete) {
+    const bgW = logicalW * 1.5;
+    const bgH = bgW * (imgClinic.height / imgClinic.width);
+    const bgY = (logicalH * PHYSICS.groundY) - bgH + 20;
+    ctx.globalAlpha = 0.5; // Слегка прозрачный фон
+    ctx.drawImage(imgClinic, -bgOffset, bgY, bgW, bgH);
+    ctx.drawImage(imgClinic, bgW - bgOffset, bgY, bgW, bgH);
+    ctx.globalAlpha = 1.0;
+  }
+
+  // ФИЗИКА АМАНА
+  const wasJumping = aman.isJumping;
+  aman.vy += PHYSICS.gravity; 
+  aman.y += aman.vy;
+  if (aman.y >= aman.groundY) { 
+    aman.y = aman.groundY; 
+    aman.vy = 0; 
+    aman.isJumping = false; 
+    if (wasJumping) spawnDust(); // Вызываем пыль при приземлении
+  }
+
+  // АНИМАЦИЯ БЕГА (Смена кадров спрайта)
+  if (!aman.isJumping) {
+    frameTimer += dt * 1000;
+    if (frameTimer >= FRAME_INTERVAL) {
+      currentFrame = (currentFrame + 1) % SPRITE_FRAMES;
+      frameTimer = 0;
+    }
+  } else {
+    currentFrame = 1; // Застывший кадр в прыжке
+  }
+
+  // ОТРИСОВКА ЗЕМЛИ (Цвета бренда)
+  let groundY = logicalH * PHYSICS.groundY;
+  ctx.fillStyle = '#BC977B'; ctx.fillRect(0, groundY, logicalW, 6);
+  ctx.fillStyle = '#EDE5DC'; ctx.fillRect(0, groundY+6, logicalW, logicalH);
+
+  // ОТРИСОВКА ЧАСТИЦ ПЫЛИ
+  for (let i = particles.length - 1; i >= 0; i--) {
+    let p = particles[i];
+    p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 2;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    ctx.fillStyle = `rgba(188, 151, 123, ${p.life})`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill();
+  }
+
+  // ОТРИСОВКА АМАНА (Спрайт)
+  if(now > STATE.invincibleUntil || Math.floor(now/100)%2===0) {
+    if (imgBear.complete && imgBear.width > 0) {
+      // Вырезаем нужный кадр из картинки
+      const frameW = imgBear.width / SPRITE_FRAMES;
+      const frameH = imgBear.height;
+      ctx.drawImage(imgBear, currentFrame * frameW, 0, frameW, frameH, aman.x, aman.y, aman.w, aman.h);
+    } else {
+      ctx.fillStyle = '#BC977B'; ctx.fillRect(aman.x, aman.y, aman.w, aman.h);
+    }
+  }
+
+  // ОТРИСОВКА ВИРУСОВ (Преграды)
+  obstacleTimer += dt * 1000;
+  if (obstacleTimer >= (800 + Math.random()*1200)) { spawnObstacle(); obstacleTimer = 0; }
+  
+  const spd = PHYSICS.currentGameSpeed * (logicalW / 480); 
+  
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    let o = obstacles[i]; 
+    o.x -= spd;
+    
+    // Рисуем картинку вируса
+    if (imgVirus.complete && imgVirus.width > 0) {
+      ctx.drawImage(imgVirus, o.x, o.y, o.w, o.h);
+    } else {
+      ctx.fillStyle = '#e24b4a'; ctx.fillRect(o.x, o.y, o.w, o.h);
+    }
+    
+    // Коллизия (хитбокс чуть меньше самой картинки для честности)
+    const hitX = aman.x + 10; const hitW = aman.w - 20;
+    const hitY = aman.y + 10; const hitH = aman.h - 15;
+    
+    if (now > STATE.invincibleUntil && 
+        hitX < o.x + o.w*0.8 && hitX + hitW > o.x + o.w*0.2 &&
+        hitY < o.y + o.h*0.8 && hitY + hitH > o.y + o.h*0.2) { 
+      
+      STATE.lives--; 
+      STATE.invincibleUntil = now + 2000; 
+      STATE.shakeTime = 400; // Трясем экран 400мс
+      obstacles.splice(i, 1); 
+      updateHUD();
+      if (STATE.lives <= 0) { ctx.restore(); endGame(false); return; } 
+    } else if (o.x < -o.w) {
+      obstacles.splice(i, 1);
+    }
+  }
+
+  ctx.restore(); // Конец Screen Shake
+  PHYSICS.currentGameSpeed += dt * 0.08; 
+  STATE.animFrameId = requestAnimationFrame(loop);
+}
+
+function endGame(isWin) { 
+  STATE.gameRunning = false; 
+  cancelAnimationFrame(STATE.animFrameId);
+  if (isWin) showScreen('w'); else showScreen('go'); 
+}
+
+$('btn-retry').addEventListener('click', () => { initGame(); showScreen('g'); startCountdown(); });
+
+// ОТПРАВКА НА PYTHON СЕРВЕР FLASK
+$('btn-claim').addEventListener('click', function() {
+  if (STATE.bonusSubmitted) return; STATE.bonusSubmitted = true;
+  this.disabled = true; this.textContent = '⏳ Оформляем...';
+
+  const payload = {
+    phone: $('inp-phone').value,
+    iin: STATE.iin,
+    score: STATE.score,
+    bonus: BONUS_NAME
+  };
+
+  fetch('/api/claim-bonus', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json())
+  .then(data => {
+    this.textContent = '✅ Бонус активирован!';
+  })
+  .catch(err => {
+    console.error(err);
+    this.textContent = '❌ Ошибка сети';
+    this.disabled = false; STATE.bonusSubmitted = false;
+  });
+});
+
+window.addEventListener('resize', () => { if(screens.g.classList.contains('active')) { initGame(); startCountdown(); } });
+
+})();
+</script>
+</body>
+</html>
