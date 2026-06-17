@@ -35,6 +35,11 @@
     .vr-field label { display: block; font-size: 11px; font-weight: 700; color: var(--brand-accent); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
     .vr-field input { width: 100%; height: 50px; border: 2px solid var(--brand-primary); border-radius: 12px; padding: 0 16px; font-size: 16px; outline: none; color: var(--brand-dark); background: white; transition: 0.2s; }
     .vr-field input:focus { border-color: var(--brand-accent); }
+    .vr-field input.error { border-color: var(--brand-error); }
+    
+    /* Сообщения об ошибках заполнения */
+    .vr-field .vr-error-msg { font-size: 11px; color: var(--brand-error); margin-top: 4px; display: none; }
+    .vr-field.has-error .vr-error-msg { display: block; }
     
     .vr-btn { width: 100%; height: 54px; background: var(--brand-primary); color: white; border: none; border-radius: 14px; font-size: 17px; font-weight: 700; cursor: pointer; margin-top: 10px; transition: 0.1s; }
     .vr-btn:active { transform: scale(0.97); background: var(--brand-accent); }
@@ -69,13 +74,15 @@
     <h2 class="vr-title">Аман, Вперёд!</h2>
     <p class="vr-subtitle">Пробегите 1000 метров через препятствия, чтобы получить скидку на прием у врача!</p>
     <div class="vr-form">
-      <div class="vr-field">
+      <div class="vr-field" id="field-phone">
         <label>Номер телефона</label>
         <input type="tel" id="inp-phone" placeholder="+7 (___) ___ __ __">
+        <div class="vr-error-msg">Введите корректный номер (11 цифр)</div>
       </div>
-      <div class="vr-field">
+      <div class="vr-field" id="field-iin">
         <label>ИИН</label>
         <input type="text" id="inp-iin" placeholder="12 цифр" maxlength="12">
+        <div class="vr-error-msg">ИИН должен состоять из ровно 12 цифр</div>
       </div>
       <button class="vr-btn" id="btn-start">🚀 Начать игру</button>
     </div>
@@ -160,13 +167,35 @@ function showScreen(name) { Object.values(screens).forEach(s => s.classList.remo
 $('inp-phone').addEventListener('input', function() {
   let v = this.value.replace(/\D/g, ''); if(v.startsWith('8')) v = '7' + v.substring(1); if(!v.startsWith('7')) v = '7' + v;
   let res = '+7'; if(v.length>1) res += ' ('+v.slice(1,4); if(v.length>4) res += ') '+v.slice(4,7); if(v.length>7) res += ' '+v.slice(7,9); if(v.length>9) res += ' '+v.slice(9,11); this.value=res;
+  $('field-phone').classList.remove('has-error');
+  this.classList.remove('error');
 });
-$('inp-iin').addEventListener('input', function() { this.value = this.value.replace(/\D/g, '').slice(0, 12); });
+
+$('inp-iin').addEventListener('input', function() { 
+  this.value = this.value.replace(/\D/g, '').slice(0, 12); 
+  $('field-iin').classList.remove('has-error');
+  this.classList.remove('error');
+});
 
 $('btn-start').addEventListener('click', () => {
-  const p = $('inp-phone').value; const i = $('inp-iin').value;
-  if(p.replace(/\D/g, '').length < 11 || i.length < 12) return alert("Заполните данные корректно");
-  STATE.iin = i;
+  const pVal = $('inp-phone').value.replace(/\D/g, ''); 
+  const iVal = $('inp-iin').value; 
+  let ok = true;
+  
+  if(pVal.length < 11) { 
+    $('field-phone').classList.add('has-error'); 
+    $('inp-phone').classList.add('error'); 
+    ok = false; 
+  }
+  if(iVal.length < 12) { 
+    $('field-iin').classList.add('has-error'); 
+    $('inp-iin').classList.add('error'); 
+    ok = false; 
+  }
+  
+  if(!ok) return;
+
+  STATE.iin = iVal;
   initGame(); showScreen('g'); startCountdown();
 });
 
